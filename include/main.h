@@ -40,7 +40,7 @@
 /**
  * You should add more #includes here
  */
-//#include "okapi/api.hpp"
+#include "okapi/api.hpp" //starting to work with okapilib
 //#include "pros/api_legacy.h"
 
 /**
@@ -53,7 +53,7 @@
  */
 // using namespace pros;
 // using namespace pros::literals;
-// using namespace okapi;
+// using namespace okapi; //commenting this line means that you will have to type okapi:: in front of every command
 
 /**
  * Prototypes for the competition control tasks are redefined here to ensure
