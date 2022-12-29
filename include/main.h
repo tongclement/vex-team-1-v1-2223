@@ -53,7 +53,7 @@
  */
 // using namespace pros;
 // using namespace pros::literals;
-// using namespace okapi; //commenting this line means that you will have to type okapi:: in front of every command
+using namespace okapi; //commenting this line means that you will have to type okapi:: in front of every command
 
 /**
  * Prototypes for the competition control tasks are redefined here to ensure

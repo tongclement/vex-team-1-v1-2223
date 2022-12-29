@@ -53,7 +53,7 @@ void initialize() {
     lv_obj_align(myButton, NULL, LV_ALIGN_IN_TOP_LEFT, 10, 10); //set the position to top mid
 
     myButtonLabel = lv_label_create(myButton, NULL); //create label and puts it inside of the button
-    lv_label_set_text(myButtonLabel, "Click the Button"); //sets label text
+    lv_label_set_text(myButtonLabel, "--"); //sets label text
 
     myLabel = lv_label_create(lv_scr_act(), NULL); //create label and puts it on the screen
     lv_label_set_text(myLabel, "Button has not been clicked yet"); //sets label text
@@ -109,17 +109,26 @@ void autonomous() {
  * task, not resume it from where it left off.
  */
 void opcontrol() {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
-	//pros::Motor left_mtr(1);
-	//pros::Motor right_mtr(2);
-	pros::Motor fly_mtr(1);
-	
+	// pros::Controller master(pros::E_CONTROLLER_MASTER);
+	// pros::Motor left_mtr(1);
+	// pros::Motor right_mtr(2);
+	// pros::Motor fly_mtr(9);
+    std::shared_ptr<ChassisController> drive = 
+    ChassisControllerBuilder() 
+        .withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
+        .withDimensions({AbstractMotor::gearset::green, (60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Diameter, Track length, Gearset
+        .withMaxVelocity(50)
+        .build();
 
-	while (true) {
+    Controller controller;
+    while (true) {
+        //Tank drive with left and right sticks
+        drive->getModel()->tank(controller.getAnalog(ControllerAnalog::leftY), controller.getAnalog(ControllerAnalog::rightY));
+        // for(int i=0;i<4;i++) {
+            drive->moveDistance(20_in); // Drive forward x inches
+            //drive->turnAngle(360_deg);   // Turn in place y/2 degrees; left for pos; right for neg
+        // }
 
-		fly_mtr = 10;
-		pros::delay(20);
-	}
+        pros::delay(100000); //x ms delay
+    }
 }
-
-//A comment
