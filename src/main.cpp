@@ -1,4 +1,5 @@
 #include "main.h"
+#include "okapi/api/odometry/odomState.hpp"
 #include "pros/motors.h"
 
 std::shared_ptr<OdomChassisController> chassis;
@@ -71,7 +72,7 @@ void initialize() {
         ChassisControllerBuilder() 
             .withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
             .withDimensions({AbstractMotor::gearset::green,(60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Track length, Gearing
-            .withMaxVelocity(50)
+            .withMaxVelocity(100)
             .withSensors(
                 ADIEncoder{'A','B'},
                 ADIEncoder{'C','D', false},
@@ -79,6 +80,8 @@ void initialize() {
             )
             .withOdometry({{2.75_in, 7.5_in, 9_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
             .buildOdometry();
+
+    chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
 
     driveTrain = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
     // assigning the chassis to a X-drive model
@@ -131,6 +134,16 @@ void autonomous() {
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
+
+/*float round_2dp(float var){
+        // 37.66666 * 100 =3766.66
+        // 3766.66 + .5 =3767.16    for rounding off value
+        // then type cast to int so value is 3767
+        // then divided by 100 so the value converted into 37.67
+        float value = (int)(var * 100 + .5);
+        return (float)value / 100;
+    }*/
+        
 void opcontrol() {
 	// pros::Controller master(pros::E_CONTROLLER_MASTER);
 	// pros::Motor left_mtr(1);
@@ -138,13 +151,28 @@ void opcontrol() {
 	// pros::Motor fly_mtr(9);
 
     Controller controller;
+    pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
+
     
     while (true) {
         //Tank drive with left and right sticks
         //drive->setState({0_in,0_in,0_deg});
         //drive->driveToPoint({0_ft,3_ft});
-        driveTrain->xArcade(0, 0.1, 0);
+        driveTrain->xArcade(0, 0, 0);
+        okapi::OdomState current_state = chassis->getState();
+        //controller.setText(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
+        //controller_master.print(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
+        controller_master.print(0, 0, current_state.str().c_str());
+        //std::string to_be_printed = ("x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
+        lv_label_set_text(myLabel, current_state.str().c_str());
+        //controller_master.print(3, 3, "theta %f",current_state.theta);
+        
+        /*chassis->setMaxVelocity(20);
+        chassis->driveToPoint({50_cm,0_cm});
+        chassis->driveToPoint({50_cm,50_cm});
+        chassis->driveToPoint({0_cm,50_cm});
+        chassis->driveToPoint({0_cm,0_cm});*/
 
-        pros::delay(10); //x ms delay
+        pros::delay(200); //x ms delay
     }
 }
