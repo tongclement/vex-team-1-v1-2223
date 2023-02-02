@@ -1,6 +1,9 @@
 #include "main.h"
 #include "pros/motors.h"
 
+std::shared_ptr<OdomChassisController> chassis;
+std::shared_ptr<okapi::XDriveModel> driveTrain;
+
 lv_obj_t * myButton;
 lv_obj_t * myButtonLabel;
 lv_obj_t * myLabel;
@@ -61,7 +64,27 @@ void initialize() {
 
 	//motor init
 	pros::Motor fly_mtr_initializer(fly_mtr_prt,pros::E_MOTOR_GEARSET_06,true, pros::E_MOTOR_ENCODER_DEGREES);
+
+
+    //x-drive init
+    chassis = //drive is inited as a global var so it can be used everywhere
+        ChassisControllerBuilder() 
+            .withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
+            .withDimensions({AbstractMotor::gearset::green,(60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Track length, Gearing
+            .withMaxVelocity(50)
+            .withSensors(
+                ADIEncoder{'A','B'},
+                ADIEncoder{'C','D', false},
+                ADIEncoder{'E','F'}
+            )
+            .withOdometry({{2.75_in, 7.5_in, 9_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
+            .buildOdometry();
+
+    driveTrain = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
+    // assigning the chassis to a X-drive model
+    driveTrain->setBrakeMode(AbstractMotor::brakeMode::hold);
 }
+
 
 /**
  * Runs while the robot is in the disabled state of Field Management System or
@@ -113,22 +136,15 @@ void opcontrol() {
 	// pros::Motor left_mtr(1);
 	// pros::Motor right_mtr(2);
 	// pros::Motor fly_mtr(9);
-    std::shared_ptr<ChassisController> drive = 
-    ChassisControllerBuilder() 
-        .withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
-        .withDimensions({AbstractMotor::gearset::green, (60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Diameter, Track length, Gearset
-        .withMaxVelocity(50)
-        .build();
 
     Controller controller;
+    
     while (true) {
         //Tank drive with left and right sticks
-        drive->getModel()->tank(controller.getAnalog(ControllerAnalog::leftY), controller.getAnalog(ControllerAnalog::rightY));
-        // for(int i=0;i<4;i++) {
-            drive->moveDistance(20_in); // Drive forward x inches
-            //drive->turnAngle(360_deg);   // Turn in place y/2 degrees; left for pos; right for neg
-        // }
+        //drive->setState({0_in,0_in,0_deg});
+        //drive->driveToPoint({0_ft,3_ft});
+        driveTrain->xArcade(0, 0.1, 0);
 
-        pros::delay(100000); //x ms delay
+        pros::delay(10); //x ms delay
     }
 }
