@@ -1,5 +1,7 @@
 #include "main.h"
 #include "okapi/api/odometry/odomState.hpp"
+#include "okapi/impl/device/controllerUtil.hpp"
+#include "pros/misc.h"
 #include "pros/motors.h"
 
 std::shared_ptr<OdomChassisController> chassis;
@@ -83,8 +85,8 @@ void initialize() {
 
     chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
 
-    driveTrain = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel());
-    // assigning the chassis to a X-drive model
+    driveTrain = std::dynamic_pointer_cast<ThreeEncoderXDriveModel>(chassis->getModel());
+    // assigning the chassis to a Three Encoder X-drive model
     driveTrain->setBrakeMode(AbstractMotor::brakeMode::hold);
 }
 
@@ -158,7 +160,14 @@ void opcontrol() {
         //Tank drive with left and right sticks
         //drive->setState({0_in,0_in,0_deg});
         //drive->driveToPoint({0_ft,3_ft});
+
+        //read the input from the controller sticks
+        //int controller_turn = controller_master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X); //this uses PROS
+        int controller_turn = controller.getAnalog(ControllerAnalog::leftX); //this uses okapilib - not sure about the differences
+        int controller_forward = controller.getAnalog(ControllerAnalog::rightY);
+        int controller_strife = controller.getAnalog(ControllerAnalog::rightX);
         driveTrain->xArcade(0, 0, 0);
+
         okapi::OdomState current_state = chassis->getState();
         //controller.setText(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
         //controller_master.print(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
