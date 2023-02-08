@@ -164,17 +164,18 @@ void opcontrol() {
 
         //read the input from the controller sticks
         //int controller_turn = controller_master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X); //this uses PROS
-        double controller_turn = controller_okapi.getAnalog(ControllerAnalog::leftX)/127; //this uses okapilib - not sure about the differences
-        double controller_forward = controller_okapi.getAnalog(ControllerAnalog::rightY)/127; //todo: implement s curve for the controller
-        double controller_strife = controller_okapi.getAnalog(ControllerAnalog::rightX)/127;
-        //driveTrain->xArcade(0, 0, 0); //should be used for degraded control when odom is off - voltage mode, note - +1 =1 is max min
+        double controller_turn = controller_okapi.getAnalog(ControllerAnalog::leftX); //this uses okapilib - not sure about the differences
+        double controller_forward = controller_okapi.getAnalog(ControllerAnalog::rightY); //todo: implement s curve for the controller
+        double controller_strife = controller_okapi.getAnalog(ControllerAnalog::rightX);
+        driveTrain->xArcade(controller_strife,controller_forward, controller_turn); //should be used for degraded control when odom is off - voltage mode, note - +1 =1 is max min
         //double QAngle = controller_okapi->getPose().theta.convert(degree);
         //lv_label_set_text(myLabel, "controller turn %d",controller_turn);
         char to_be_printed[100];
         //std::string to_be_printed = ("forward input %f,turn input %f, strife input %f",controller_forward,controller_turn,controller_strife);
         sprintf(to_be_printed,"forward input %f,turn input %f, strife input %f",controller_forward,controller_turn,controller_strife);
         lv_label_set_text(myLabel, to_be_printed);
-        driveTrain->fieldOrientedXArcade(controller_strife,controller_forward, controller_turn,chassis->getState().theta);// you can use an IMU as an alternative for the QAngle //chassis->getPose().theta.convert(degree)
+        //driveTrain->fieldOrientedXArcade(controller_strife,controller_forward, controller_turn,chassis->getState().theta);// you can use an IMU as an alternative for the QAngle //chassis->getPose().theta.convert(degree)
+        //driveTrain->fieldOrientedXArcade(controller_strife,controller_forward, controller_turn,chassis->getState().theta);// you can use an IMU as an alternative for the QAngle //chassis->getPose().theta.convert(degree)
         
         okapi::OdomState current_state = chassis->getState();
         //controller.setText(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
