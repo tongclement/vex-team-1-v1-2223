@@ -72,7 +72,27 @@ void initialize() {
     //x-drive init
     chassis = //drive is inited as a global var so it can be used everywhere
         ChassisControllerBuilder() 
-            .withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
+            //.withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left
+            /*
+            //config,FR, Turn, Strife
+            0000 No, No, No
+            0001 Yes?, Yes?, Yes?
+            0010 No, No, No
+            0011 NO, No, No
+            0100 No
+            0101 No, No, No
+            0110 Invertedm Inverted, Inverted - so lets flip it
+            0111
+            1000
+            1001 Yes, Yes, Yes
+            1010
+            1011
+            1100 No, No, No
+            1101
+            1110
+            1111
+            */
+            .withMotors(-20,11,3,-2) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
             .withDimensions({AbstractMotor::gearset::green,(60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Track length, Gearing
             .withMaxVelocity(100)
             .withSensors(
