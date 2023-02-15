@@ -28,6 +28,11 @@ static lv_res_t btn_click_action(lv_obj_t * btn)
     return LV_RES_OK;
 }
 
+float current_fly_pct=0;
+void change_fly_speed(float fly_pct){
+    pros::Motor fly_mtr(9);
+    fly_mtr.move_velocity(fly_pct*6); //Max +-600
+}
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -35,7 +40,7 @@ static lv_res_t btn_click_action(lv_obj_t * btn)
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
-#define fly_mtr_prt 1
+#define fly_mtr_prt 9
 void initialize() {
 
 	lv_style_copy(&myButtonStyleREL, &lv_style_plain);
@@ -67,7 +72,7 @@ void initialize() {
 
 	//motor init
 	pros::Motor fly_mtr_initializer(fly_mtr_prt,pros::E_MOTOR_GEARSET_06,true, pros::E_MOTOR_ENCODER_DEGREES);
-
+    pros::Motor fly_mtr(9);
 
     //x-drive init
     chassis = //drive is inited as a global var so it can be used everywhere
@@ -170,13 +175,14 @@ void opcontrol() {
 	// pros::Controller master(pros::E_CONTROLLER_MASTER);
 	// pros::Motor left_mtr(1);
 	// pros::Motor right_mtr(2);
-	// pros::Motor fly_mtr(9);
+	pros::Motor fly_mtr(9);
 
     //Controller controller;
     pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
     okapi::Controller controller_okapi = Controller();
 
-    
+    change_fly_speed(10);
+
     while (true) {
         //Tank drive with left and right sticks
         //drive->setState({0_in,0_in,0_deg});
@@ -192,19 +198,19 @@ void opcontrol() {
         //lv_label_set_text(myLabel, "controller turn %d",controller_turn);
         char to_be_printed[100];
         //std::string to_be_printed = ("forward input %f,turn input %f, strife input %f",controller_forward,controller_turn,controller_strife);
-        sprintf(to_be_printed,"forward input %f,turn input %f, strife input %f",controller_forward,controller_turn,controller_strife);
-        lv_label_set_text(myLabel, to_be_printed);
+        //sprintf(to_be_printed,"forward input %f,turn input %f, strife input %f",controller_forward,controller_turn,controller_strife);
+        //lv_label_set_text(myLabel, to_be_printed);
         //driveTrain->fieldOrientedXArcade(controller_strife,controller_forward, controller_turn,chassis->getState().theta);// you can use an IMU as an alternative for the QAngle //chassis->getPose().theta.convert(degree)
         //driveTrain->fieldOrientedXArcade(controller_strife,controller_forward, controller_turn,chassis->getState().theta);// you can use an IMU as an alternative for the QAngle //chassis->getPose().theta.convert(degree)
         
         okapi::OdomState current_state = chassis->getState();
         //controller.setText(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
         //controller_master.print(0, 0, "x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
-        controller_master.print(0, 0, current_state.str().c_str());
+        //controller_master.print(0, 0, current_state.str().c_str());
         //std::string to_be_printed = ("x %f,y %f, theta %f",current_state.x,current_state.y,current_state.theta);
         
         //good debugging - just swapping the screen output to debug something else
-        //lv_label_set_text(myLabel, current_state.str().c_str());
+        lv_label_set_text(myLabel, current_state.str().c_str());
         //controller_master.print(3, 3, "theta %f",current_state.theta);
         
         /*chassis->setMaxVelocity(20);
@@ -212,7 +218,14 @@ void opcontrol() {
         chassis->driveToPoint({50_cm,50_cm});
         chassis->driveToPoint({0_cm,50_cm});
         chassis->driveToPoint({0_cm,0_cm});*/
+        
+        current_fly_pct+=controller_master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)*2.5; //increase fly speed by 5%
+        current_fly_pct-=controller_master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)*2.5; //decrease fly speed by 5%
+        change_fly_speed(current_fly_pct);
+        controller_master.print(0, 0, std::to_string(current_fly_pct).c_str()); //note: .c_str converts str to char
+        //if (controller_get_digital(E_CONTROLLER_MASTER, E_CONTROLLER_DIGITAL_A)
+        //controller_master.print(0, 0, current_state.str().c_str());
 
-        pros::delay(20); //x ms delay
+        pros::delay(30); //x ms delay
     }
 }
