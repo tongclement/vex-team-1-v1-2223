@@ -246,8 +246,8 @@ void opcontrol() {
         intake_mtr_speed += controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN)*10;
         intake_mtr.move_velocity(intake_mtr_speed);
         
-        current_fly_pct+=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)*2.5; //increase fly speed by 5%
-        current_fly_pct-=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)*2.5; //decrease fly speed by 5%
+        current_fly_pct+=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)*5; //increase fly speed by 5%
+        current_fly_pct-=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)*5; //decrease fly speed by 5%
         change_fly_speed(current_fly_pct);
         std::cout << intake_mtr_speed << std::endl;
         controller_master.print(0, 0, std::to_string(current_fly_pct).c_str()); //note: .c_str converts str to char
