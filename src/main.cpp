@@ -28,11 +28,22 @@ static lv_res_t btn_click_action(lv_obj_t * btn)
     return LV_RES_OK;
 }
 
+void disk_indexer(){ //indexes one disk
+
+}
 float current_fly_pct=0;
+float intake_mtr_speed = 0;
+float index_mtr_speed = 0;
+float indexer_pos=0;
 void change_fly_speed(float fly_pct){
     pros::Motor fly_mtr(9);
     fly_mtr.move_velocity(fly_pct*6); //Max +-600
 }
+/*
+Flywheel Testing
+12° 45 Power 34 cm from left wall to original C-channel limit, touching red barrier
+
+*/
 
 /**
  * Runs initialization code. This occurs as soon as the program is started.
@@ -40,7 +51,10 @@ void change_fly_speed(float fly_pct){
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
+#define index_mtr_prt 6
 #define fly_mtr_prt 9
+#define intake_prt 10
+
 void initialize() {
 
 	lv_style_copy(&myButtonStyleREL, &lv_style_plain);
@@ -72,7 +86,12 @@ void initialize() {
 
 	//motor init
 	pros::Motor fly_mtr_initializer(fly_mtr_prt,pros::E_MOTOR_GEARSET_06,true, pros::E_MOTOR_ENCODER_DEGREES);
-    pros::Motor fly_mtr(9);
+
+    //motor init for intake
+    pros::Motor intake_mtr_initializer(intake_prt, pros::E_MOTOR_GEARSET_18, true, pros::E_MOTOR_ENCODER_DEGREES);
+
+    //motor for indexer
+    pros::Motor index_mtr_initializer(index_mtr_prt, pros::E_MOTOR_GEARSET_18,true, pros::E_MOTOR_ENCODER_DEGREES);
 
     //x-drive init
     chassis = //drive is inited as a global var so it can be used everywhere
@@ -176,12 +195,14 @@ void opcontrol() {
 	// pros::Motor left_mtr(1);
 	// pros::Motor right_mtr(2);
 	pros::Motor fly_mtr(9);
+    pros::Motor intake_mtr(10);
+    pros::Motor index_mtr(index_mtr_prt); //port 6
 
     //Controller controller;
     pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
     okapi::Controller controller_okapi = Controller();
 
-    change_fly_speed(10);
+    // change_fly_speed(10);
 
     while (true) {
         //Tank drive with left and right sticks
@@ -218,14 +239,27 @@ void opcontrol() {
         chassis->driveToPoint({50_cm,50_cm});
         chassis->driveToPoint({0_cm,50_cm});
         chassis->driveToPoint({0_cm,0_cm});*/
+
+        index_mtr_speed += controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT)*10;
+        index_mtr_speed -= controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)*10;
+        intake_mtr_speed -= controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_UP)*10;
+        intake_mtr_speed += controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_DOWN)*10;
+        intake_mtr.move_velocity(intake_mtr_speed);
         
-        current_fly_pct+=controller_master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)*2.5; //increase fly speed by 5%
-        current_fly_pct-=controller_master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)*2.5; //decrease fly speed by 5%
+        current_fly_pct+=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L1)*2.5; //increase fly speed by 5%
+        current_fly_pct-=controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_L2)*2.5; //decrease fly speed by 5%
         change_fly_speed(current_fly_pct);
+        std::cout << intake_mtr_speed << std::endl;
         controller_master.print(0, 0, std::to_string(current_fly_pct).c_str()); //note: .c_str converts str to char
         //if (controller_get_digital(E_CONTROLLER_MASTER, E_CONTROLLER_DIGITAL_A)
         //controller_master.print(0, 0, current_state.str().c_str());
 
+
+        //indexer
+        if(controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R1)){
+            indexer_pos+=180;
+            index_mtr.move_absolute(indexer_pos,180);
+        }
         pros::delay(30); //x ms delay
     }
 }
