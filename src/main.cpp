@@ -6,6 +6,7 @@
 #include "okapi/impl/device/controllerUtil.hpp"
 #include "pros/misc.h"
 #include "pros/motors.h"
+#include "HolonomicLib/API.hpp"
 
 std::shared_ptr<OdomChassisController> chassis;
 std::shared_ptr<okapi::XDriveModel> driveTrain;
