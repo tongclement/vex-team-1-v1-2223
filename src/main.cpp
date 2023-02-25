@@ -10,6 +10,7 @@
 
 std::shared_ptr<OdomChassisController> chassis;
 std::shared_ptr<okapi::XDriveModel> driveTrain;
+std::shared_ptr<AsyncHolonomicChassisController> Holo_controller;
 
 lv_obj_t * myButton;
 lv_obj_t * myButtonLabel;
@@ -51,16 +52,31 @@ void change_fly_speed(float fly_pct){
 
 pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
 
+
 std::uint32_t RTOStime = pros::millis();
 void PrintController(void* tmp) {
+    okapi::OdomState current_state = chassis->getState();
+    std::cout << "Printing is true!" << std::endl;
     while (true) {
         //controller_master.print(0, 0, std::to_string(pros::c::motor_get_actual_velocity(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
-        controller_master.print(0, 0, std::to_string(current_fly_pct).c_str()); //note: .c_str converts str to char
+        int battery = round(pros::battery::get_capacity());
+        std::string tmp1, tmp2, tmp3;
+        tmp1 = std::to_string(battery);
+        tmp2 = "Bat: "+tmp1.substr(0,2)+"(P)";
+        controller_master.print(0,0,tmp2.c_str()); //"Battery: xx(P)"
         pros::delay(50);
-        controller_master.print(1, 0, std::to_string(pros::c::motor_get_voltage(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
+
+        tmp1 = current_state.str(); 
+        tmp2 = tmp1.substr(12,4)+", "+tmp1.substr(22,4)+", "+tmp1.substr(36,4);
+
+        controller_master.print(1,0,tmp2.c_str());
         pros::delay(50);
-        controller_master.print(2, 0, std::to_string(pros::c::motor_get_temperature(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
-        pros::Task::delay_until(&RTOStime, 150); //Every 1s regardless of pros::delay
+
+        tmp1 = std::to_string(round(pros::c::motor_get_actual_velocity(fly_mtr_prt)/6)).c_str();
+        tmp2 = std::to_string(round(pros::c::motor_get_temperature(fly_mtr_prt))).c_str();
+        tmp3 = "V:"+tmp1.substr(0,3)+";T:"+tmp2.substr(0,3)+"°C";
+        controller_master.print(2, 0,tmp3.c_str()); //note: .c_str converts str to char
+        pros::Task::delay_until(&RTOStime, 300); //Every 1s regardless of pros::delay
     }
 }
 // void PrintTerminal(void* tmp) {
@@ -168,11 +184,12 @@ void initialize() {
             .withDimensions({AbstractMotor::gearset::green,(60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Track length, Gearing
             .withMaxVelocity(100)
             .withSensors(
-                ADIEncoder{'A','B'},
-                ADIEncoder{'C','D', false},
-                ADIEncoder{'E','F'}
+                ADIEncoder{'A','B', true},
+                ADIEncoder{'C','D', true},
+                ADIEncoder{'E','F',true}
             )
-            .withOdometry({{2.75_in, 7.5_in, 9_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
+            //.withOdometry({{2.75_in, 7.5_in, 9_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
+            .withOdometry({{2.75_in, 6.5_in, 9.5_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
             .buildOdometry();
 
     chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
@@ -180,8 +197,32 @@ void initialize() {
     driveTrain = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel()); //switch to ThreeEncoderXDriveModel???
     // assigning the chassis to a Three Encoder X-drive model
     driveTrain->setBrakeMode(AbstractMotor::brakeMode::hold);
-}
 
+    std::shared_ptr<AsyncHolonomicChassisController> Holo_controller =
+    AsyncHolonomicChassisControllerBuilder(chassis)
+        // PID gains (must be tuned for your robot)
+        .withDistGains(
+            {0.05, 0.0, 0.00065, 0.0} // Translation gains
+        )
+        .withTurnGains(
+            {0.05, 0.0, 0.00065, 0.0} // Turn gains
+        )
+        //.withDistGains(const okapi::IterativePosPIDController::Gains &idistGains)
+        //.withTurnGains(const okapi::IterativePosPIDController::Gains &iturnGains)
+        // Tolerance (how close the chassis must be to the target before stopping)
+        /*.withDistSettleParameters(
+            0.5_in, // Max error
+            2.0_in / 1_s, // Max derivative
+            100_ms // Wait time
+        )
+        .withTurnSettleParameters(
+            1.0_in, // Max error
+            2.0_in / 1_s, // Max derivative
+            100_ms // Wait time
+        )*/
+        .build();
+    
+}
 /**
  * Runs while the robot is in the disabled state of Field Management System or
  * the VEX Competition Switch, following either autonomous or opcontrol. When
@@ -212,7 +253,14 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
-
+    std::cout << "in auton" << " , ";
+    //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
+    //chassis->driveToPoint({0_ft,3_ft});
+    //Holo_controller->waitUntilSettled();
+    std::cout << "ran auton" << " , ";
+    /*while(true){
+        pros::delay(30);
+    }*/
 }
 
 /**
@@ -254,10 +302,14 @@ void opcontrol() {
 
     // change_fly_speed(10);
 
+    //std::cout << "in fake auton" << " , ";
+    //Holo_controller->setTarget({0.5_m, 0_m, 0_deg}, true);
+    //std::cout << "ran fake auton" << " , ";
+
     while (true) {
         //Tank drive with left and right sticks
         //drive->setState({0_in,0_in,0_deg});
-        //drive->driveToPoint({0_ft,3_ft});
+        //chassis->driveToPoint({0_ft,3_ft});
 
         //read the input from the controller sticks
         //int controller_turn = controller_master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X); //this uses PROS
@@ -304,8 +356,8 @@ void opcontrol() {
         std::cout << pros::c::motor_get_actual_velocity(fly_mtr_prt) << " , ";
         //std::cout << pros::c::motor_get_temperature(fly_mtr_prt) << " , ";
         //std::cout << pros::c::motor_get_voltage_limit(fly_mtr_prt) << std::endl;
-        if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT)) {
-            chassis->turnToPoint({0_m, 0_m});
+        if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2)) {
+            chassis->turnToPoint({0.65_m, 3.0_m});
         }
         //if (controller_get_digital(E_CONTROLLER_MASTER, E_CONTROLLER_DIGITAL_A)
         //controller_master.print(0, 0, current_state.str().c_str());
