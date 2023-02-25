@@ -54,7 +54,8 @@ pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
 std::uint32_t RTOStime = pros::millis();
 void PrintController(void* tmp) {
     while (true) {
-        controller_master.print(0, 0, std::to_string(pros::c::motor_get_actual_velocity(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
+        //controller_master.print(0, 0, std::to_string(pros::c::motor_get_actual_velocity(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
+        controller_master.print(0, 0, std::to_string(current_fly_pct).c_str()); //note: .c_str converts str to char
         pros::delay(50);
         controller_master.print(1, 0, std::to_string(pros::c::motor_get_voltage(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
         pros::delay(50);
@@ -80,8 +81,26 @@ Flywheel Testing
  * to keep execution time for this mode under a few seconds.
  */
 
+void myPID(void *tmp) {
+    float error, integral, derivative, prevError, power;
+    const float kP = 10, kI = 10, kD = 10;
+    while (!controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) {
+        error = current_fly_pct*6 - pros::c::motor_get_actual_velocity(fly_mtr_prt) ;
+        integral = integral + error;
+        derivative = error - prevError;
+        prevError = error;
+        power = error*kP + integral*kI + derivative*kD;
+        if (power > 100) {
+            power = 100;
+        }
+        change_fly_speed(power);
+        pros::Task::delay_until(&RTOStime, 15);
+    } 
+}
+
 void initialize() {
     pros::task_t my_task = pros::c::task_create(PrintController,NULL,TASK_PRIORITY_DEFAULT, TASK_STACK_DEPTH_DEFAULT, "PrintController");
+    //pros::task_t task_2 = pros::c::task_create(myPID,NULL,TASK_PRIORITY_DEFAULT, TASK_STACK_DEPTH_DEFAULT, "FlyWheelPID");
 
 	lv_style_copy(&myButtonStyleREL, &lv_style_plain);
     myButtonStyleREL.body.main_color = LV_COLOR_MAKE(150, 0, 0);
@@ -291,7 +310,7 @@ void opcontrol() {
 
         //indexer
         if(controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R1)){
-            indexer_pos+=180;
+            indexer_pos-=180;
             index_mtr.move_absolute(indexer_pos,180);
         }
         pros::delay(30); //x ms delay
