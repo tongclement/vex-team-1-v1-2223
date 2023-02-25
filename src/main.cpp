@@ -19,6 +19,20 @@ lv_obj_t * myLabel;
 lv_style_t myButtonStyleREL; //relesed style
 lv_style_t myButtonStylePR; //pressed style
 
+
+//all the variables
+#define index_mtr_prt 6
+#define fly_mtr_prt 9
+#define intake_prt 10
+#define expansion_prt 19
+
+
+float current_fly_pct=0;
+float intake_mtr_speed = 0;
+float index_mtr_speed = 0;
+float indexer_pos=0;
+int start_pos=1;
+
 static lv_res_t btn_click_action(lv_obj_t * btn)
 {
     uint8_t id = lv_obj_get_free_num(btn); //id usefull when there are multiple buttons
@@ -26,7 +40,13 @@ static lv_res_t btn_click_action(lv_obj_t * btn)
     if(id == 0)
     {
         char buffer[100];
-		sprintf(buffer, "button was clicked %i milliseconds from start", pros::millis());
+		//sprintf(buffer, "button was clicked %i milliseconds from start", pros::millis());
+        if (start_pos==1){
+            start_pos=2;
+        } else if (start_pos==2){
+            start_pos=1;
+        }
+        sprintf(buffer, "starting position is %i, options 1,2", start_pos);
 		lv_label_set_text(myLabel, buffer);
     }
 
@@ -37,14 +57,7 @@ static lv_res_t btn_click_action(lv_obj_t * btn)
 
 // }
 
-#define index_mtr_prt 6
-#define fly_mtr_prt 9
-#define intake_prt 10
 
-float current_fly_pct=0;
-float intake_mtr_speed = 0;
-float index_mtr_speed = 0;
-float indexer_pos=0;
 void change_fly_speed(float fly_pct){
     pros::Motor fly_mtr(9);
     fly_mtr.move_velocity(fly_pct*6); //Max +-600
@@ -52,25 +65,28 @@ void change_fly_speed(float fly_pct){
 
 pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
 
-
+void expand(void){
+    pros::Motor expansion_mtr(expansion_prt);
+    expansion_mtr.move_relative(-180,100);
+}
 std::uint32_t RTOStime = pros::millis();
 void PrintController(void* tmp) {
-    okapi::OdomState current_state = chassis->getState();
     std::cout << "Printing is true!" << std::endl;
     while (true) {
+        okapi::OdomState current_state = chassis->getState();
         //controller_master.print(0, 0, std::to_string(pros::c::motor_get_actual_velocity(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
         int battery = round(pros::battery::get_capacity());
         std::string tmp1, tmp2, tmp3;
         tmp1 = std::to_string(battery);
         tmp2 = "Bat: "+tmp1.substr(0,2)+"(P)";
         controller_master.print(0,0,tmp2.c_str()); //"Battery: xx(P)"
-        pros::delay(50);
+        pros::delay(70);
 
         tmp1 = current_state.str(); 
         tmp2 = tmp1.substr(12,4)+", "+tmp1.substr(22,4)+", "+tmp1.substr(36,4);
 
         controller_master.print(1,0,tmp2.c_str());
-        pros::delay(50);
+        pros::delay(70);
 
         tmp1 = std::to_string(round(pros::c::motor_get_actual_velocity(fly_mtr_prt)/6)).c_str();
         tmp2 = std::to_string(round(pros::c::motor_get_temperature(fly_mtr_prt))).c_str();
@@ -154,6 +170,8 @@ void initialize() {
     //motor for indexer
     pros::Motor index_mtr_initializer(index_mtr_prt, pros::E_MOTOR_GEARSET_18,true, pros::E_MOTOR_ENCODER_DEGREES);
 
+    pros::Motor expansion_mtr_initalizer(expansion_prt, pros::E_MOTOR_GEARSET_36,true, pros::E_MOTOR_ENCODER_DEGREES);
+
     //x-drive init
     chassis = //drive is inited as a global var so it can be used everywhere
         ChassisControllerBuilder() 
@@ -192,20 +210,19 @@ void initialize() {
             .withOdometry({{2.75_in, 6.5_in, 9.5_in, 2.75_in}, quadEncoderTPR}) //quadEncoderTPR=fixed variable representing the ticks per rotation of the red v1 potentiometers 
             .buildOdometry();
 
-    chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+
 
     driveTrain = std::dynamic_pointer_cast<XDriveModel>(chassis->getModel()); //switch to ThreeEncoderXDriveModel???
     // assigning the chassis to a Three Encoder X-drive model
     driveTrain->setBrakeMode(AbstractMotor::brakeMode::hold);
 
-    std::shared_ptr<AsyncHolonomicChassisController> Holo_controller =
-    AsyncHolonomicChassisControllerBuilder(chassis)
+    Holo_controller = AsyncHolonomicChassisControllerBuilder(chassis)
         // PID gains (must be tuned for your robot)
         .withDistGains(
-            {0.05, 0.0, 0.00065, 0.0} // Translation gains
+            {0.02, 0.0, 0.00025, 0.0} // Translation gains
         )
         .withTurnGains(
-            {0.05, 0.0, 0.00065, 0.0} // Turn gains
+            {0.02, 0.0, 0.00025, 0.0} // Turn gains
         )
         //.withDistGains(const okapi::IterativePosPIDController::Gains &idistGains)
         //.withTurnGains(const okapi::IterativePosPIDController::Gains &iturnGains)
@@ -253,14 +270,63 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
+    pros::Motor fly_mtr(9);
+    pros::Motor intake_mtr(10);
+    pros::Motor index_mtr(index_mtr_prt); //port 6
+    pros::Motor expansion_mtr(expansion_prt);
+
+    /*if (start_pos==1){
+        chassis->setState({0.90_m, 0.30_m, 180_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+    } else if (start_pos==2){
+        chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+    }
     std::cout << "in auton" << " , ";
-    //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
+    Holo_controller->setTarget({3_m, 3_m, 0_deg}, true);
     //chassis->driveToPoint({0_ft,3_ft});
     //Holo_controller->waitUntilSettled();
     std::cout << "ran auton" << " , ";
-    /*while(true){
-        pros::delay(30);
+
+    if (start_pos==1){
+        //auton routine 1
+        //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
+        //change_fly_speed(70); //tbc 
+        
+        
+        
+    } else if(start_pos==2){
+        //atuon routine 2
+    }
+    while(true){
+        pros::delay(100);
     }*/
+
+    if (start_pos==1){
+        chassis->setState({0.90_m, 0.30_m, 180_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+    } else if (start_pos==2){
+        chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+    }
+    if (start_pos==1){
+        //auton routine 1
+        //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
+        //chassis->driveToPoint({-0.9_m,-0.3_m});
+        //driveTrain->setBrakeMode(MOTOR_BRAKE_HOLD);
+        //driveTrain->forward(1);
+        //intake_mtr.move_velocity(50);
+        intake_mtr.move_relative(200,200);
+        //pros::delay(500);
+        //driveTrain->stop();
+        driveTrain->xArcade(0,10,0);
+        pros::delay(2000);
+
+
+        //change_fly_speed(70); //tbc 
+        
+        
+        
+    } else if(start_pos==2){
+        //atuon routine 2
+    }
+
 }
 
 /**
@@ -296,6 +362,7 @@ void opcontrol() {
 	pros::Motor fly_mtr(9);
     pros::Motor intake_mtr(10);
     pros::Motor index_mtr(index_mtr_prt); //port 6
+    pros::Motor expansion_mtr(expansion_prt);
 
     //Controller controller;
     okapi::Controller controller_okapi = Controller();
@@ -368,6 +435,14 @@ void opcontrol() {
             indexer_pos-=180;
             index_mtr.move_absolute(indexer_pos,180);
         }
+
+        //expansion
+        if(controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)){
+            std::cout<<"exapnding!!"<<",";
+            expand();
+        }
+
+
         pros::delay(30); //x ms delay
     }
 }
