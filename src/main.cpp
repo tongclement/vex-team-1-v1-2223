@@ -161,9 +161,10 @@ void initialize() {
             1110
             1111
             */
-            .withMotors(-20,11,3,-2) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
-            //.withMotors(20,-11,-3,2) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
-            //.withMotors(3,-2,-20,11) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
+            //old correct 25/02
+            //.withMotors(-20,11,3,-2) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
+            
+            .withMotors(-3,2,20,-11) //Top Left, Top Right, Bottom Right, Bottom Left //16 combos because 2^4 
             .withDimensions({AbstractMotor::gearset::green,(60.0/84.0)}, {{4_in, 26.5_in}, imev5GreenTPR}) //Track length, Gearing
             .withMaxVelocity(100)
             .withSensors(
@@ -261,8 +262,10 @@ void opcontrol() {
         //read the input from the controller sticks
         //int controller_turn = controller_master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_X); //this uses PROS
         double controller_turn = controller_okapi.getAnalog(ControllerAnalog::leftX); //this uses okapilib - not sure about the differences
-        double controller_forward = -controller_okapi.getAnalog(ControllerAnalog::rightY); //todo: implement s curve for the controller
-        double controller_strife = -controller_okapi.getAnalog(ControllerAnalog::rightX);
+        double controller_forward = controller_okapi.getAnalog(ControllerAnalog::rightY); //todo: implement s curve for the controller
+        double controller_strife = controller_okapi.getAnalog(ControllerAnalog::rightX);
+        /*double controller_forward = -controller_okapi.getAnalog(ControllerAnalog::rightY); //todo: implement s curve for the controller
+        double controller_strife = -controller_okapi.getAnalog(ControllerAnalog::rightX);*/
         driveTrain->xArcade(controller_strife,controller_forward, controller_turn); //should be used for degraded control when odom is off - voltage mode, note - +1 =1 is max min
         //double QAngle = controller_okapi->getPose().theta.convert(degree);
         //lv_label_set_text(myLabel, "controller turn %d",controller_turn);
