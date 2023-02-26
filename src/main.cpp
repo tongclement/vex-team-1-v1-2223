@@ -31,7 +31,7 @@ float current_fly_pct=0;
 float intake_mtr_speed = 0;
 float index_mtr_speed = 0;
 float indexer_pos=0;
-int start_pos=1;
+int start_pos=2;
 
 static lv_res_t btn_click_action(lv_obj_t * btn)
 {
@@ -63,6 +63,23 @@ void change_fly_speed(float fly_pct){
     fly_mtr.move_velocity(fly_pct*6); //Max +-600
 }
 
+void ShootThree(bool auton) {
+    pros::Motor index_mtr(6);
+    if (auton == false){
+        change_fly_speed(70);
+    }else {
+        change_fly_speed(35);
+    }
+    pros::delay(500);
+    for(int i=0;i<3;i++) {
+        indexer_pos-=180;
+        index_mtr.move_absolute(indexer_pos,180);
+        pros::delay(500);
+    }
+    change_fly_speed(0);
+}
+
+
 pros::Controller controller_master (pros::E_CONTROLLER_MASTER);
 
 void expand(void){
@@ -71,7 +88,6 @@ void expand(void){
 }
 std::uint32_t RTOStime = pros::millis();
 void PrintController(void* tmp) {
-    std::cout << "Printing is true!" << std::endl;
     while (true) {
         okapi::OdomState current_state = chassis->getState();
         //controller_master.print(0, 0, std::to_string(pros::c::motor_get_actual_velocity(fly_mtr_prt)).c_str()); //note: .c_str converts str to char
@@ -113,21 +129,27 @@ Flywheel Testing
  * to keep execution time for this mode under a few seconds.
  */
 
-void myPID(void *tmp) {
-    float error, integral, derivative, prevError, power;
-    const float kP = 10, kI = 10, kD = 10;
-    while (!controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) {
-        error = current_fly_pct*6 - pros::c::motor_get_actual_velocity(fly_mtr_prt) ;
-        integral = integral + error;
-        derivative = error - prevError;
-        prevError = error;
-        power = error*kP + integral*kI + derivative*kD;
-        if (power > 100) {
-            power = 100;
-        }
-        change_fly_speed(power);
-        pros::Task::delay_until(&RTOStime, 15);
-    } 
+// void myPID(void *tmp) {
+//     float error, integral, derivative, prevError, power;
+//     const float kP = 10, kI = 10, kD = 10;
+//     while (!controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) {
+//         error = current_fly_pct*6 - pros::c::motor_get_actual_velocity(fly_mtr_prt) ;
+//         integral = integral + error;
+//         derivative = error - prevError;
+//         prevError = error;
+//         power = error*kP + integral*kI + derivative*kD;
+//         if (power > 100) {
+//             power = 100;
+//         }
+//         change_fly_speed(power);
+//         pros::Task::delay_until(&RTOStime, 15);
+//     } 
+// }
+
+bool started = false;
+void Roller(void *tmp) {
+    driveTrain->forward(20);
+    pros::Task::delay_until(&RTOStime, 1000);
 }
 
 void initialize() {
@@ -247,6 +269,11 @@ void initialize() {
  */
 void disabled() {}
 
+void index(){
+    pros::Motor index_mtr(index_mtr_prt); //port 6
+    indexer_pos-=180;
+    index_mtr.move_absolute(indexer_pos,180);
+}
 /**
  * Runs after initialize(), and before autonomous when connected to the Field
  * Management System or the VEX Competition Switch. This is intended for
@@ -275,36 +302,17 @@ void autonomous() {
     pros::Motor index_mtr(index_mtr_prt); //port 6
     pros::Motor expansion_mtr(expansion_prt);
 
-    /*if (start_pos==1){
-        chassis->setState({0.90_m, 0.30_m, 180_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+    if (start_pos==1){
+        chassis->setState({0.36_m, 0.92_m, 180_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
     } else if (start_pos==2){
-        chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
+        chassis->setState({2.12_m, 3.35_m, 340_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
     }
-    std::cout << "in auton" << " , ";
-    Holo_controller->setTarget({3_m, 3_m, 0_deg}, true);
+    // std::cout << "in auton" << " , ";
+    // Holo_controller->setTarget({3_m, 3_m, 0_deg}, true);
     //chassis->driveToPoint({0_ft,3_ft});
     //Holo_controller->waitUntilSettled();
-    std::cout << "ran auton" << " , ";
+    // std::cout << "ran auton" << " , ";
 
-    if (start_pos==1){
-        //auton routine 1
-        //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
-        //change_fly_speed(70); //tbc 
-        
-        
-        
-    } else if(start_pos==2){
-        //atuon routine 2
-    }
-    while(true){
-        pros::delay(100);
-    }*/
-
-    if (start_pos==1){
-        chassis->setState({0.90_m, 0.30_m, 180_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
-    } else if (start_pos==2){
-        chassis->setState({0_in, 0_in, 0_deg}); //todo: to be changed to a configurable value depending on the starting position on the pitch 
-    }
     if (start_pos==1){
         //auton routine 1
         //Holo_controller->setTarget({1_m, 0_m, 0_deg}, false);
@@ -312,19 +320,79 @@ void autonomous() {
         //driveTrain->setBrakeMode(MOTOR_BRAKE_HOLD);
         //driveTrain->forward(1);
         //intake_mtr.move_velocity(50);
-        intake_mtr.move_relative(200,200);
         //pros::delay(500);
         //driveTrain->stop();
-        driveTrain->xArcade(0,10,0);
-        pros::delay(2000);
+        // driveTrain->xArcade(0,10,0);
+        // pros::delay(2000);
 
-
-        //change_fly_speed(70); //tbc 
-        
-        
-        
+        //intake_mtr.move_velocity(50);
+        intake_mtr.move_relative(-500,50);
+        //inch forward
+        pros::task_t roller_inch_forward = pros::c::task_create(Roller,NULL,TASK_PRIORITY_DEFAULT, TASK_STACK_DEPTH_DEFAULT, "RollerInchForward");
+        //move intake async 
+        pros::delay(1000);
+        pros::c::task_suspend(roller_inch_forward);
+        //intake_mtr.move_velocity(0);
+        //stop the roller inch forward task (self stopping after x ms)
+        //driveToPoint
+        // chassis->turnToPoint({0.95_m,1.53_m});
+        // chassis->driveToPoint({1.65_m, 1.4_m});
+        // //turn to point 
+        // chassis->turnToPoint({0.5_m, 3.15_m});
+        // pros::delay(5000);
+        //fly wheel 70%
+        // ShootThree(true);
+        //launch 2 discs
+        //move to point 1.5,0.8
+        // chassis->driveToPoint({1.54_m, 0.95_m});
+        // pros::delay(5000);
+        // chassis->moveDistance(0.1_m);
+        // pros::delay(1000);
+        // chassis->moveDistance(-0.1_m);
+        // chassis->driveToPoint({1.65_m, 1.4_m});
+        // chassis->turnToPoint({0.5_m, 3.15_m});
+        // ShootThree(true);
     } else if(start_pos==2){
         //atuon routine 2
+        //move intake async 
+        //chassis->driveToPoint({2.96_m,3.34_m});
+        //chassis->turnToPoint({3.1_m, 3.9_m});
+        
+        /* auton v1 11am
+        intake_mtr.move_velocity(130);
+        pros::task_t roller_inch_forward = pros::c::task_create(Roller,NULL,TASK_PRIORITY_DEFAULT, TASK_STACK_DEPTH_DEFAULT, "RollerInchForward");
+        pros::delay(2000);
+        pros::c::task_suspend(roller_inch_forward); */ 
+        
+        
+        //chassis->driveToPoint({1.36_m, 1.62_m});
+        //chassis->turnToPoint({3.13_m, 0.52_m});
+        // pros::delay(5000);
+        // ShootThree(true);
+        // chassis->driveToPoint({0.94_m, 1.52_m});
+        // pros::delay(1000);
+        // chassis->driveToPoint({1.25_m, 1.83_m});
+        // pros::delay(1000);
+        // chassis->driveToPoint({1.56_m, 2.15_m});
+        // chassis->turnToPoint({3.13_m,0.52_m});
+        // ShootThree(true);
+
+
+        //auton v2 12pm
+        change_fly_speed(60);
+        chassis->moveDistance(0.7_m);
+        pros::delay(500);
+        chassis->turnAngle(30_deg);
+        pros::delay(4000);
+        index();
+        pros::delay(1300);
+        index();
+        pros::delay(1300);
+        index();
+        pros::delay(72000);
+        expand();
+
+        
     }
 
 }
@@ -355,6 +423,7 @@ void autonomous() {
 void opcontrol() {
     std::ios_base::sync_with_stdio(0);
     std::cout.tie(0);
+    pros::c::motor_set_brake_mode(9, pros::E_MOTOR_BRAKE_COAST);
 
 	// pros::Controller master(pros::E_CONTROLLER_MASTER);
 	// pros::Motor left_mtr(1);
@@ -424,7 +493,7 @@ void opcontrol() {
         //std::cout << pros::c::motor_get_temperature(fly_mtr_prt) << " , ";
         //std::cout << pros::c::motor_get_voltage_limit(fly_mtr_prt) << std::endl;
         if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_R2)) {
-            chassis->turnToPoint({0.65_m, 3.0_m});
+            chassis->turnToPoint({3.0_m, 0.65_m});
         }
         //if (controller_get_digital(E_CONTROLLER_MASTER, E_CONTROLLER_DIGITAL_A)
         //controller_master.print(0, 0, current_state.str().c_str());
@@ -435,10 +504,18 @@ void opcontrol() {
             indexer_pos-=180;
             index_mtr.move_absolute(indexer_pos,180);
         }
+        if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) {
+            ShootThree(false);
+        }
+        if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_X)) {
+            change_fly_speed(45);
+        }
+        if (controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
+            change_fly_speed(0);
+        }
 
         //expansion
         if(controller_master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y)){
-            std::cout<<"exapnding!!"<<",";
             expand();
         }
 
