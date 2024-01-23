@@ -183,7 +183,7 @@ void initialize() {
     lv_label_set_text(myLabel, "Button has not been clicked yet"); //sets label text
     lv_obj_align(myLabel, NULL, LV_ALIGN_IN_LEFT_MID, 10, 0); //set the position to center
 
-	//motor init
+	//motor init=
 	pros::Motor fly_mtr_initializer(fly_mtr_prt,pros::E_MOTOR_GEARSET_06,true, pros::E_MOTOR_ENCODER_DEGREES);
 
     //motor init for intake
@@ -419,7 +419,8 @@ void autonomous() {
         float value = (int)(var * 100 + .5);
         return (float)value / 100;
     }*/
-        
+
+
 void opcontrol() {
     std::ios_base::sync_with_stdio(0);
     std::cout.tie(0);
@@ -523,3 +524,4 @@ void opcontrol() {
         pros::delay(30); //x ms delay
     }
 }
+
